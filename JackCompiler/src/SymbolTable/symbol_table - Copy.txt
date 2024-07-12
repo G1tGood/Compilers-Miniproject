@@ -1,0 +1,121 @@
+with Ada.Strings.Hash;
+with Ada.Strings.Unbounded;
+with Ada.Containers.Indefinite_Hashed_Maps;
+with Identifier_Kinds; use Identifier_Kinds;
+with Ada.Exceptions; use Ada.Exceptions;
+
+package body Symbol_Table is
+
+   -- Initialize the Symbol Table
+   procedure Initialize (This : out SymbolTable) is
+   begin
+      This.classTable.Clear;
+      This.subroutineTable.Clear;
+   end Initialize;
+
+   
+   -- Start a new subroutine table (reset subroutine table)
+   procedure startSubroutine (This : out SymbolTable) is
+   begin
+      This.subroutineTable.Clear;
+   end startSubroutine;
+
+   
+   -- Define an identifier in the symbol table
+   procedure define (This : in out SymbolTable;
+                     Name : in String;
+                     IType : String;
+                     Kind  : Identifier_Kinds.IdentifierKind)
+   is
+      newEntry : IdentifierEntry;
+      table : tablePointer;
+   begin
+      This.getTableScope (kind, table);
+      
+      -- if the identifier already exists, don't define it
+      if table.Contains (name) then
+         return;
+      end if;
+      
+      newEntry.iType := To_Unbounded_String(IType);
+      newEntry.kind  := kind;
+      newEntry.index := This.varCount (kind => Kind);
+      
+      table.Include (Key       => name,
+                     New_Item  => newEntry);
+   end define;
+
+   
+   -- Returns the amount of identifiers of the given kind already defined
+   function varCount (This : in SymbolTable;
+                      Kind : Identifier_Kinds.IdentifierKind) return Natural is
+      count : Natural := 0;
+      table : tablePointer;
+   begin
+      This.getTableScope (kind, table);
+      
+      for idEntry of table.all loop
+         if idEntry.kind = kind then
+            count := count + 1;
+         end if;
+      end loop;
+      
+      return count;
+   end varCount;
+
+   
+   -- Returns the kind of the identifier with given name
+   function KindOf (This : in SymbolTable;
+                    Name : String) return Identifier_Kinds.IdentifierKind is
+   begin
+      if This.subroutineTable.Contains (name) then
+         return This.subroutineTable.Element (name).kind;
+      elsif This.classTable.Contains (name) then
+         return This.classTable.Element (name).kind;
+      end if;
+      return I_NONE;
+   end KindOf;
+
+   
+   -- Returns the type of the identifier with given name
+   function TypeOf (This : in SymbolTable;
+                    Name : String) return String is
+      My_Except : exception;
+   begin
+      if This.subroutineTable.Contains (name) then
+         return To_String (This.subroutineTable.Element (name).iType);
+      elsif This.classTable.Contains (name) then
+         return To_String (This.classTable.Element (name).iType);
+      end if;
+      raise My_Except with "error in TypeOf: no identifier with this name";
+   end TypeOf;
+
+   
+   -- Returns the index of the identifier with given name
+   function IndexOf (This : in SymbolTable;
+                     Name : String) return Natural is
+      My_Except : exception;
+   begin
+      if This.subroutineTable.Contains (name) then
+         return This.subroutineTable.Element (name).index;
+      elsif This.classTable.Contains (name) then
+         return This.classTable.Element (name).index;
+      end if;
+      raise My_Except with "error in IndexOf: no identifier with this name";
+   end IndexOf;
+   
+   
+   procedure getTableScope (This : in SymbolTable; kind : in identifier_kinds.IdentifierKind; table : out tablePointer)  
+   is
+      My_Except : exception;
+   begin
+      if kind in I_ARG | I_VAR then
+         table := This.subroutineTable'Access;
+      elsif kind in I_STATIC | I_FIELD then
+         table := This.classTable'Access;
+      end if;
+      raise My_Except with "no identifier with NONE type";
+   end getTableScope;
+   
+
+end Symbol_Table;

@@ -1,0 +1,8 @@
+project Jackcompiler is
+
+   for Source_Dirs use ("src/vm_language_elements/", "src/VMWriter/", "src/SymbolTable/", "src/jack_language_elements/", "src/CompilationEngine/", "src/JackTokenizer/", "src");
+   for Object_Dir use "obj";
+   for Main use ("JackCompiler.adb");
+
+end Jackcompiler;
+

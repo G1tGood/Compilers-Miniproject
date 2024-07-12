@@ -1,0 +1,78 @@
+with identifier_kinds;
+with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.Strings;
+with Ada.Strings.Hash;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+
+package Symbol_Table is
+   --  Type representing the Symbol Table.
+   type SymbolTable is tagged limited private;
+
+   --| Initializes the Symbol Table.
+   --| @param This The Symbol Table instance.
+   procedure Initialize (This : out SymbolTable);
+
+   --| starts a new subroutine table (resets subroutine table).
+   --| @param This The Symbol Table instance.
+   procedure startSubroutine (This : out SymbolTable);
+
+   --| Checks if there are more tokens in the input.
+   --| @param This The Symbol Table instance.
+   --| @param name name of the identifier (eg. x, y, amount).
+   --| @param iType type of the identifier (eg. int, float, Point).
+   --| @parma kind kind of the identifier (static, field, arg, var)
+   procedure define (This : in out SymbolTable; name: in String; iType: String; kind: identifier_kinds.IdentifierKind);
+
+   --| returns the amount of identifiers of the given kind already difined.
+   --| @param This The Symbol Table instance.
+   --| @param kind identifer kind
+   --| @return amount of identifiers of the given kind already difined.
+   function varCount (This : in SymbolTable; kind: identifier_kinds.IdentifierKind) return Natural;
+
+   --| Returns the kind of the identifier with given name.
+   --| @param This The Symbol Table instance.
+   --| @param name the name of the requested identifier
+   --| @return the kind of the identifier with given name.
+   function kindOf (This : in SymbolTable; name: String) return identifier_kinds.IdentifierKind;
+
+   --| Returns the type of the identifier with given name.
+   --| @param This The Symbol Table instance.
+   --| @param name the name of the requested identifier
+   --| @return the type of the identifier with given name.
+   function typeOf (This : in SymbolTable; name : String) return String;
+
+   --| Returns the index of the identifier with given name.
+   --| @param This The Symbol Table instance.
+   --| @param name the name of the requested identifier
+   --| @return the index of the identifier with given name.
+   function indexOf (This : in SymbolTable; name : String) return Natural;
+
+private
+
+   type IdentifierEntry is record
+      iType : Unbounded_String; -- type of the identifier
+      kind  : identifier_kinds.IdentifierKind; -- kind of the identifier
+      index : Natural; -- index of the identifier
+   end record;
+
+   package Identifier_Hashed_Maps is new
+     Ada.Containers.Indefinite_Hashed_Maps
+       (Key_Type        => String,
+        Element_Type    => IdentifierEntry,
+        Hash            => Ada.Strings.Hash,
+        Equivalent_Keys => "=");
+
+   type tablePointer is access all Identifier_Hashed_Maps.Map;
+
+   type SymbolTable is tagged limited record
+      classTable : Identifier_Hashed_Maps.Map;
+      subroutineTable: Identifier_Hashed_Maps.Map;
+   end record;
+
+   --| Returns access type to the correct table scope (class or subroutine) according to kind of identifier.
+   --| @param This The Symbol Table instance.
+   --| @param kind kind of the requested identifier.
+   --| @param out table the table access to get the correct table scope
+   procedure getTableScope (This : in SymbolTable; kind : in identifier_kinds.IdentifierKind; table : out tablePointer);
+
+end Symbol_Table;
